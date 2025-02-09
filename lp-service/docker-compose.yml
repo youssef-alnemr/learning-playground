@@ -1,0 +1,11 @@
+services:
+  long-polling-service:
+    image: long-polling-service:v1
+    ports:
+      - "8080:8080"
+  postgres-db:
+    image: postgres:12.2-alpine
+    environment:
+      POSTGRES_USER: example
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: test_longpolling
