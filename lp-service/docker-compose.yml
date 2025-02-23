@@ -1,11 +1,42 @@
 services:
-  long-polling-service:
-    image: long-polling-service:v1
+  load-balancer:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
-  postgres-db:
+      - "8080:80"
+    networks:
+      - lp-networks
+    depends_on:
+      - long-polling-service1
+      - long-polling-service2
+  long-polling-service1:
+    image: long-polling-service:v2
+    ports:
+      - "8188:8080"
+    networks:
+      - lp-networks
+  long-polling-service2:
+    image: long-polling-service:v2
+    ports:
+      - "8288:8080"
+    networks:
+      - lp-networks
+  lp-postgres-db:
     image: postgres:12.2-alpine
+    ports:
+      - 57892:5432
     environment:
       POSTGRES_USER: example
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: test_longpolling
+    volumes:
+      - db-volume:/var/lib/postgresql/data
+    networks:
+      - lp-networks
+volumes:
+  db-volume:
+
+networks:
+  lp-networks:
+    driver: bridge

@@ -1,8 +1,11 @@
 package com.example.lpservice.services;
 
 import com.example.lpservice.workers.Worker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.lang.management.ManagementFactory;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -14,10 +17,17 @@ public class LongPollingService {
     private final ConcurrentHashMap<UUID, Worker> workers = new ConcurrentHashMap<>();
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
+    private final String serviceId = ManagementFactory.getRuntimeMXBean().getName();
+    private final Logger logger = LoggerFactory.getLogger(LongPollingService.class);
+
     public UUID submitRequest() {
         try {
             UUID uuid = UUID.randomUUID();
-            Worker worker = new Worker(uuid, 0, (uuid1 -> workers.remove(uuid)));
+            logger.error("Worker {} on machine {} has received request", uuid, serviceId);
+            Worker worker = new Worker(uuid, 0, (uuid1 -> {
+                logger.error("Worker {} on machine {} has finished", uuid1, serviceId);
+                return workers.remove(uuid);
+            }));
             Worker previousWorker = workers.putIfAbsent(uuid, worker);
             if (worker.equals(previousWorker)) {
                 throw new IllegalStateException("Cannot create two workers with the same UUID");
@@ -33,6 +43,7 @@ public class LongPollingService {
     }
 
     public String getStatus(UUID uuid) {
+        logger.info("Polling worker {} on machine {}", uuid, serviceId);
         while (workers.get(uuid) != null);
         return String.format("Worker %s has finished", uuid);
     }
